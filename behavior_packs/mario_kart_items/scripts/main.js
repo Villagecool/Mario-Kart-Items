@@ -42,7 +42,7 @@ SERVER.system.beforeEvents.startup.subscribe((initEvent) => {
         const target = type == "vc:blue_shell" ? getFarthestEntity(possibleTargets, shell.location) : getNearestEntity(possibleTargets, shell.location);
 
         const movement = SERVER.system.runInterval(() => {
-          if (!shell) return;
+          if (!shell || !shell.isValid) return;
           const loc = shell?.location; //general movement
           shell.clearVelocity();
           let vertoffset = 0;
@@ -50,18 +50,20 @@ SERVER.system.beforeEvents.startup.subscribe((initEvent) => {
           if (type == "vc:green_shell" || type == "vc:yellow_shell") {
             if (type == "vc:yellow_shell" && SERVER.system.currentTick % 10 == 0) spawnCoins(shell.location);
             //green
-            if (!shell.dimension.getBlock(offsetLocation(loc, { x: movementvec.x, y: 0, z: 0 })).isAir) { movementvec.x = -movementvec.x; shell.dimension.playSound("mk.shell.bounce", shell.location); }
-            if (!shell.dimension.getBlock(offsetLocation(loc, { z: movementvec.z, y: 0, x: 0 })).isAir) { movementvec.z = -movementvec.z; shell.dimension.playSound("mk.shell.bounce", shell.location); }
-            if (shell.dimension.getBlock(offsetLocation(loc, { z: 0, y: -0.5, x: 0 })).isAir) { vertoffset = -0.5;}
-            try { if (distanceVector(shell.location, getNearestEntity(shell.dimension.getEntities().filter((me) => me.nameTag != e.source.nameTag && !me?.getComponent("minecraft:type_family")?.hasTypeFamily("inanimate") && me.typeId != "minecraft:item"), shell.location).location) < 1.5) explode() } catch {}
+            try {
+              if (!shell.dimension.getBlock(offsetLocation(loc, { x: movementvec.x, y: 0, z: 0 })).isAir) { movementvec.x = -movementvec.x; shell.dimension.playSound("mk.shell.bounce", shell.location); }
+              if (!shell.dimension.getBlock(offsetLocation(loc, { z: movementvec.z, y: 0, x: 0 })).isAir) { movementvec.z = -movementvec.z; shell.dimension.playSound("mk.shell.bounce", shell.location); }
+              if (shell.dimension.getBlock(offsetLocation(loc, { z: 0, y: -0.5, x: 0 })).isAir) { vertoffset = -0.5;}
+              if (distanceVector(shell.location, getNearestEntity(shell.dimension.getEntities().filter((me) => me.nameTag != e.source.nameTag && !me?.getComponent("minecraft:type_family")?.hasTypeFamily("inanimate") && me.typeId != "minecraft:item"), shell.location).location) < 1.5) explode() 
+            } catch {}
           }
 
-          shell.teleport( offsetLocation(loc, { x: movementvec.x*0.5, y: target && type != "vc:green_shell" && type != "vc:yellow_shell" ? target.location.y - shell.location.y : vertoffset, z: movementvec.z*0.5}) );
+          shell.teleport( offsetLocation(loc, { x: movementvec.x*0.5, y: (target && target.isValid) && type != "vc:green_shell" && type != "vc:yellow_shell" ? target.location.y - shell.location.y : vertoffset, z: movementvec.z*0.5}) );
 
           if (type == "vc:red_shell" || type == "vc:blue_shell") {
 
             //red
-            if (!target) {type = "vc:green_shell"; canExplode = true; return;};
+            if (!target || !target.isValid) {type = "vc:green_shell"; canExplode = true; return;};
 
             var targetAngle = canExplode ? getAngleBetweenPoints(shell.location, target?.location) : lerp(angle, getAngleBetweenPoints(shell.location, target?.location), 0.65);
             if (angle > 180 && getAngleBetweenPoints(shell.location, target?.location) < angle && targetAngle < 360) targetAngle += 360;
@@ -85,7 +87,7 @@ SERVER.system.beforeEvents.startup.subscribe((initEvent) => {
               if (SERVER.system.currentTick % 4 == 0) shell.dimension.playSound("mk.blue_shell.warn", shell.location);
             }
         }, 1);
-        SERVER.system.runTimeout(() => { SERVER.system.clearRun(movement); shell.remove(); }, 10 * 20); //clears after 10 seconds
+        SERVER.system.runTimeout(() => { SERVER.system.clearRun(movement); if (shell.isValid) shell.remove(); }, 10 * 20); //clears after 10 seconds
         SERVER.system.runTimeout(() => {  canExplode = true; }, 20); //1 second explosion cooldown
 
 
@@ -103,10 +105,12 @@ SERVER.system.beforeEvents.startup.subscribe((initEvent) => {
           var point = target.location;
           var spinny = SERVER.system.runInterval(() => {
             tick++;
-            if (!target.hasTag("usedMushroom")) point = target.location;
+            if (!target || !target.isValid || !shell.isValid) {SERVER.system.clearRun(spinny); return}
+            if (!target?.hasTag("usedMushroom")) point = target.location;
             shell.teleport(offsetLocation(point, { x: Math.sin(tick * 0.5) * 2, y: 1.5, z: Math.cos(tick * 0.5) * 2 }));
           }, 1);
           SERVER.system.runTimeout(() => {
+            SERVER.system.clearRun(spinny)
             if (!target.hasTag("usedMushroom")) shell.teleport(target.location);
             explode();
           }, 40);
@@ -243,7 +247,7 @@ SERVER.system.beforeEvents.startup.subscribe((initEvent) => {
                   z: getForwardVector(e.source.getRotation().y).z*3
               })
               bomb.nameTag = e.source.nameTag;
-              SERVER.system.runTimeout(()=>{bomb.triggerEvent('boom'); bomb.runCommand(`playsound mk.bob_om.explode @a ~~~`); bomb.runCommand(`particle vc:bomb_om_explode ~~~`);},20)
+              SERVER.system.runTimeout(()=>{if (bomb.isValid) { bomb.triggerEvent('boom'); bomb.runCommand(`playsound mk.bob_om.explode @a ~~~`); bomb.runCommand(`particle vc:bomb_om_explode ~~~`); }},20)
             }
             horn.setRotation(e.source.getRotation())
             horn.teleport(offsetLocation(e.source.getHeadLocation(), {x:0,y:0.5,z:0}))
@@ -478,10 +482,10 @@ SERVER.system.afterEvents.scriptEventReceive.subscribe((e) => {
 
 
         const movement = SERVER.system.runInterval(() => {
-          if (!e.sourceEntity) return;
+          if (!e.sourceEntity || !e.sourceEntity.isValid) return;
           const target = getNearestEntity(e.sourceEntity.dimension.getEntities().filter((me) => me.nameTag != e.sourceEntity.nameTag && !me?.getComponent("minecraft:type_family")?.hasTypeFamily("inanimate") && me.typeId != "minecraft:item"), e.sourceEntity.location)
           
-          if (!target) {explode(); return;};const loc = e.sourceEntity?.location; //general movement
+          if (!target || !target.isValid) {explode(); return;};const loc = e.sourceEntity?.location; //general movement
           e.sourceEntity.clearVelocity();
 
           gravity = e.sourceEntity.dimension.getBlock(offsetLocation(e.sourceEntity.location, {x:0,y:-0.2,z:0})).isAir ? gravity - 0.2 : 0
@@ -498,7 +502,7 @@ SERVER.system.afterEvents.scriptEventReceive.subscribe((e) => {
           movementvec = getForwardVector(angle);
 
           }, 2);
-        SERVER.system.runTimeout(() => { SERVER.system.clearRun(movement); explode(); }, 10 * 20); //clears after 10 seconds
+        SERVER.system.runTimeout(() => { SERVER.system.clearRun(movement); if (e.sourceEntity.isValid) explode(); }, 10 * 20); //clears after 10 seconds
 
 
         function explode() { //Boom chicka boom
@@ -603,6 +607,7 @@ SERVER.world.afterEvents.projectileHitEntity.subscribe(e=>{
     entity.setRotation(e.getEntityHit().entity.getRotation())
     entity.getComponent('minecraft:rideable').addRider(e.getEntityHit().entity)
     var no = SERVER.system.runInterval(()=>{
+      if (!entity.isValid || !e.getEntityHit().entity.isValid) {SERVER.system.clearRun(no); return;}
       entity.applyImpulse(motion)
       if (entity.getComponent('minecraft:rideable').getRiders().length <= 0) entity.getComponent('minecraft:rideable').addRider(e.getEntityHit().entity) //you cant escape
       entity.setRotation({x:entity.getRotation().x,y:entity.getRotation().y+5})
@@ -614,6 +619,7 @@ SERVER.world.afterEvents.projectileHitEntity.subscribe(e=>{
   }
 })
 SERVER.world.afterEvents.playerInteractWithEntity.subscribe(e=>{
+  if (e.target.typeId != 'vc:minekart') return
   //console.warn('replaceitem entity @s slot.weapon.mainhand 0 banner 1 ' + superStackGetData(e.player))
   if (e.itemStack?.typeId == 'minecraft:banner' && e.player.isSneaking) {
     //e.player.runCommand('give @s minecraft:banner 1 ' + superStackGetData(e.target, 'minecraft:banner'))
