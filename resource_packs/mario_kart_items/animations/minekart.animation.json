@@ -24,6 +24,45 @@
 					}
 				}
 			}
+		},
+		"animation.minekart.blue": {
+			"animation_length": 0.125,
+			"particle_effects": {
+				"0.0": {
+					"effect": "mini_trubo",
+					"locator": "particle1"
+				},
+				"0.0417": {
+					"effect": "mini_trubo",
+					"locator": "particle2"
+				}
+			}
+		},
+		"animation.minekart.orange": {
+			"animation_length": 0.125,
+			"particle_effects": {
+				"0.0": {
+					"effect": "super_mini_trubo",
+					"locator": "particle1"
+				},
+				"0.0417": {
+					"effect": "super_mini_trubo",
+					"locator": "particle2"
+				}
+			}
+		},
+		"animation.minekart.pink": {
+			"animation_length": 0.125,
+			"particle_effects": {
+				"0.0": {
+					"effect": "ultra_mini_trubo",
+					"locator": "particle1"
+				},
+				"0.0417": {
+					"effect": "ultra_mini_trubo",
+					"locator": "particle2"
+				}
+			}
 		}
 	}
 }

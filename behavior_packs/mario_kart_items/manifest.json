@@ -1,5 +1,10 @@
 {
   "format_version": 2,
+  "metadata": {
+    "authors": ["vlliage"],
+    "product_type": "addon",
+    "license": "MIT"
+  },
   "header": {
     "description": "(Almost) Every item from the Mario Kart Series!",
     "name": "Mario Kart Items",
@@ -17,7 +22,7 @@
       "entry": "scripts/main.js"
     },
     {
-      "description": "Custom Items Behavior Pack",
+      "description": "Behavior Pack",
       "type": "data",
       "uuid": "bff5ca33-70d4-4b60-8cd2-38914bbf40bb",
       "version": [1, 0, 1]

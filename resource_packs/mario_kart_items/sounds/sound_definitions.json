@@ -85,6 +85,10 @@
       "category": "ui",
       "sounds": ["sounds/mk/blooper"]
     },
+    "mk.car": {
+      "category": "block",
+      "sounds": ["sounds/mk/engine"]
+    },
     "mk.horn": {
       "category": "ui",
       "sounds": [

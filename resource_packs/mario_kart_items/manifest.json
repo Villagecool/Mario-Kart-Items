@@ -1,5 +1,10 @@
 {
   "format_version": 2,
+  "metadata": {
+    "authors": ["vlliage"],
+    "product_type": "addon",
+    "license": "MIT"
+  },
   "header": {
     "description": "(Almost) Every item from the Mario Kart Series!",
     "name": "Mario Kart Items",
@@ -9,7 +14,7 @@
   },
   "modules": [
     {
-      "description": "Demo Resource Pack",
+      "description": "Resource Pack",
       "type": "resources",
       "uuid": "75ac0a8c-a570-4bc1-bf10-7e4947117ff8",
       "version": [1, 0, 1]

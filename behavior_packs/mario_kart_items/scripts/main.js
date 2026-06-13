@@ -1,6 +1,6 @@
 import * as SERVER from "@minecraft/server";
 import * as UI from "@minecraft/server-ui";
-import { damage_item, decripateStack, distanceVector, getRandomFloat, getRandomInt, lerp, offsetLocation } from "./utils.js";
+import { damage_item, decripateStack, distanceVector, getRandomFloat, getRandomInt, lerp, limit, offsetLocation } from "./utils.js";
 
 console.log("yep its running alright");
 SERVER.system.beforeEvents.startup.subscribe((initEvent) => {
@@ -48,7 +48,7 @@ SERVER.system.beforeEvents.startup.subscribe((initEvent) => {
           let vertoffset = 0;
 
           if (type == "vc:green_shell" || type == "vc:yellow_shell") {
-            if (type == "vc:yellow_shell") spawnCoins(shell.location);
+            if (type == "vc:yellow_shell" && SERVER.system.currentTick % 10 == 0) spawnCoins(shell.location);
             //green
             if (!shell.dimension.getBlock(offsetLocation(loc, { x: movementvec.x, y: 0, z: 0 })).isAir) { movementvec.x = -movementvec.x; shell.dimension.playSound("mk.shell.bounce", shell.location); }
             if (!shell.dimension.getBlock(offsetLocation(loc, { z: movementvec.z, y: 0, x: 0 })).isAir) { movementvec.z = -movementvec.z; shell.dimension.playSound("mk.shell.bounce", shell.location); }
@@ -82,7 +82,7 @@ SERVER.system.beforeEvents.startup.subscribe((initEvent) => {
             }
             //blue
             if (e.itemStack.typeId == "vc:blue_spiny_shell") {
-              if (SERVER.system.currentTick % 3 == 0) shell.dimension.playSound("mk.blue_shell.warn", shell.location);
+              if (SERVER.system.currentTick % 4 == 0) shell.dimension.playSound("mk.blue_shell.warn", shell.location);
             }
         }, 1);
         SERVER.system.runTimeout(() => { SERVER.system.clearRun(movement); shell.remove(); }, 10 * 20); //clears after 10 seconds
@@ -300,7 +300,7 @@ SERVER.system.beforeEvents.startup.subscribe((initEvent) => {
           const movement = SERVER.system.runInterval(()=> {
             horn.setRotation(e.source.getRotation())
             horn.teleport(offsetLocation(e.source.getHeadLocation(), {x:0,y:1,z:0}))
-            spawnCoins(horn.location)
+            if (SERVER.system.currentTick % 10 == 0) spawnCoins(horn.location)
           },1)
           SERVER.system.runTimeout(() => { SERVER.system.clearRun(movement); horn.remove(); }, 10 * 5); //clears after 10 seconds
         }
@@ -405,7 +405,38 @@ SERVER.system.beforeEvents.startup.subscribe((initEvent) => {
 });
 //all possible items
 // ...::3 indicated the item count
+
 const items = [ "vc:koopa_shell", "vc:koopa_shell::3", "vc:banana_peel", "vc:mushroom", "vc:mushroom::3", "vc:banana_barrel", "vc:big_banana_peel", "vc:blooper", "vc:bob_om_cannon", "vc:bob_om", "vc:bob_om::2", "vc:fake_item_box", "vc:boo", "vc:bullet_bill", "vc:coin", "vc:fire_flower", "vc:ice_flower", "vc:boomerang_flower", "vc:super_horn", "vc:spiny_shell", "vc:blue_spiny_shell", "vc:mega_mushroom", "vc:gold_mushroom", "vc:coin_box", "vc:coin_shell", "vc:lightning", "vc:feather", "vc:star",
+];
+const weighteditems = [ 
+  { item: "vc:koopa_shell", weight: 100},
+  { item: "vc:koopa_shell::3", weight: 15},
+  { item: "vc:banana_peel", weight: 120},
+  { item: "vc:mushroom", weight: 100},
+  { item: "vc:mushroom::3", weight: 15},
+  { item: "vc:banana_barrel", weight: 20},
+  { item: "vc:big_banana_peel", weight: 10},
+  { item: "vc:blooper", weight: 15},
+  { item: "vc:bob_om_cannon", weight: 18},
+  { item: "vc:bob_om", weight: 50},
+  { item: "vc:bob_om::2", weight: 10},
+  { item: "vc:fake_item_box", weight: 8},
+  { item: "vc:boo", weight: 10},
+  { item: "vc:bullet_bill", weight: 8},
+  { item: "vc:coin", weight: 50},
+  { item: "vc:fire_flower", weight: 25},
+  { item: "vc:ice_flower", weight: 25},
+  { item: "vc:boomerang_flower", weight: 25},
+  { item: "vc:super_horn", weight: 25},
+  { item: "vc:spiny_shell", weight: 35},
+  { item: "vc:blue_spiny_shell", weight: 8},
+  { item: "vc:mega_mushroom", weight: 0},
+  { item: "vc:gold_mushroom", weight: 8},
+  { item: "vc:coin_box", weight: 10},
+  { item: "vc:coin_shell", weight: 6},
+  { item: "vc:lightning", weight: 8},
+  { item: "vc:feather", weight: 25},
+  { item: "vc:star", weight: 8}
 ];
 SERVER.system.afterEvents.scriptEventReceive.subscribe((e) => {
 
@@ -425,10 +456,16 @@ SERVER.system.afterEvents.scriptEventReceive.subscribe((e) => {
         e.sourceEntity.playSound("mk.wii.item");
         let roulette = SERVER.system.runInterval(() => {
           const sel = items[getRandomInt(0, items.length - 1)].split("::");
-          container.setItem(i, new SERVER.ItemStack(sel[0], sel[1] ?? 1));
+          container.setItem(i, new SERVER.ItemStack(sel[0], Number(sel[1] ?? 1)));
         }, 1);
         SERVER.system.runTimeout(() => {
           SERVER.system.clearRun(roulette);
+          const sel = weighteditems.weightedRandom().split("::");
+          container.setItem(i, new SERVER.ItemStack(sel[0], Number(sel[1] ?? 1)))
+          if (sel[0].includes('coin') && e.sourceEntity.getComponent('minecraft:riding')?.entityRidingOn) SERVER.system.runTimeout(()=>{
+            container.setItem(i, undefined)
+            e.sourceEntity.getComponent('minecraft:riding')?.entityRidingOn.getComponent("minecraft:inventory").container.addItem(new SERVER.ItemStack(sel[0], 1))
+          },10)
         }, 80);
         return;
       }
@@ -487,6 +524,56 @@ SERVER.system.afterEvents.scriptEventReceive.subscribe((e) => {
     e.sourceEntity.clearVelocity()
     e.sourceEntity.playAnimation('animation.minekart.blast')
     e.sourceEntity.addEffect('slowness', 20, {amplifier:255,showParticles:false})
+  }
+  if (e.id == "vc:carttick") {
+    const vel = e.sourceEntity.getVelocity();
+    e.sourceEntity.dimension.playSound('mk.car', e.sourceEntity.location, {volume: 0.25+(Math.hypot(vel.x, vel.z))/5, pitch:0.75+(Math.hypot(vel.x, vel.z))/5})
+    if (e.sourceEntity.getComponent('minecraft:rideable').getRiders().length > 0) {
+      //const previousYaw = e.sourceEntity.getDynamicProperty('prevyaw') || 0
+      //const turnspeed = (Math.round(updateTurnSharpness(e.sourceEntity.getRotation().y, SERVER.system.currentTick, previousYaw)*5000000))
+      //e.sourceEntity.setDynamicProperty('mtenegry', limit((e.sourceEntity.getDynamicProperty('mtenegry') || 0) + (turnspeed-35),0, 100))
+      //e.sourceEntity.runCommand(`title @a actionbar ${turnspeed} || ${e.sourceEntity.getDynamicProperty('mtenegry')}`)
+      //e.sourceEntity.setDynamicProperty('prevyaw', e.sourceEntity.getRotation().y)
+      //if (turnspeed <= 5 && e.sourceEntity.getDynamicProperty('mtenegry') > 20) {
+      //  const mtenegry = e.sourceEntity.getDynamicProperty('mtenegry')
+      //  e.sourceEntity.setDynamicProperty('mtenegry', 0)
+      //  if (mtenegry < 40)      e.sourceEntity.addEffect('speed', 40, {showParticles: false, amplifier: 2}) //Mini Turbo!
+      //  else if (mtenegry < 60) e.sourceEntity.addEffect('speed', 40, {showParticles: false, amplifier: 5}) //Super Mini Turbo!
+      //  else                    e.sourceEntity.addEffect('speed', 40, {showParticles: false, amplifier: 10}) //Super Duper Mini Turbo!
+      //}
+      if (isDrifting(e.sourceEntity)) {
+        e.sourceEntity.setDynamicProperty('driftcount', (e.sourceEntity.getDynamicProperty('driftcount') || 0) + 1)
+        //e.sourceEntity.runCommand('title @a actionbar Drift! ' + (e.sourceEntity.getDynamicProperty('driftcount') || 0))
+
+        const count = e.sourceEntity.getDynamicProperty('driftcount') || 0
+        if (count < 4 && count > 2) e.sourceEntity.playAnimation('animation.minekart.blue')
+        else if (count < 8 && count > 2) e.sourceEntity.playAnimation('animation.minekart.orange')
+        else if (count > 2) e.sourceEntity.playAnimation('animation.minekart.pink')
+
+      } else {
+        const count = e.sourceEntity.getDynamicProperty('driftcount') || 0
+        if (count > 2) e.sourceEntity.dimension.playSound('random.fizz', e.sourceEntity.location, {volume:0.75})
+        if (count < 4 && count > 2)      e.sourceEntity.addEffect('speed', 10, {showParticles: false, amplifier: 1}) //Mini Turbo!
+        else if (count < 8 && count > 2) e.sourceEntity.addEffect('speed', 14, {showParticles: false, amplifier: 2}) //Super Mini Turbo!
+        else if (count > 2)              e.sourceEntity.addEffect('speed', 20, {showParticles: false, amplifier: 3}) //Ultra Mini Turbo!
+        e.sourceEntity.setDynamicProperty('driftcount', null)
+      }
+      function isDrifting(entity) {
+        const vel = entity.getVelocity(); // Vector3 { x, y, z }
+        const speed = Math.hypot(vel.x, vel.z);
+        if (speed < 0.1) return false; // Ignore slow movement
+
+        const moveAngle = Math.atan2(-vel.x, vel.z) * (180 / Math.PI); // Degrees
+
+        const facingAngle = entity.getRotation().y; // Yaw in degrees
+
+        let angleDiff = Math.abs(moveAngle - facingAngle) % 360;
+        if (angleDiff > 180) angleDiff = 360 - angleDiff;
+
+        return angleDiff > 15; //15 is threshold
+      }
+
+    }
   }
   if (e.id == "vc:cartbreak") {
     if (e.sourceEntity.hasTag('areyoureallysure')) {
@@ -568,7 +655,7 @@ function spawnCoins(loc) {
   SERVER.world
     .getDimension("overworld")
     .spawnItem(
-      new SERVER.ItemStack(getRandomInt(0, 3) == 0 ? "vc:event_coin" : "vc:coin", getRandomInt(1, 2)),
+      new SERVER.ItemStack(getRandomInt(0, 3) == 0 ? "vc:event_coin" : "vc:coin", 1),
       offsetLocation(loc, { x: getRandomFloat(-0.5, 0.5), y: getRandomFloat(-0.5, 0.5), z: getRandomFloat(-0.5, 0.5) })
     );
 }
@@ -648,7 +735,6 @@ function getAngleBetweenPoints(a, b) {
   return degrees;
 }
 
-let previousYaw = 0;
 
 /**
  *
@@ -656,7 +742,7 @@ let previousYaw = 0;
  * @param {*} deltaTime current tick
  * @returns {Number} Angle the cart is turning
  */
-function updateTurnSharpness(currentYaw, deltaTime) {
+function updateTurnSharpness(currentYaw, deltaTime, previousYaw) {
   let deltaYaw = currentYaw - previousYaw;
 
   // Wrap around 360°
@@ -668,25 +754,19 @@ function updateTurnSharpness(currentYaw, deltaTime) {
 
   return Math.abs(angularVelocity); // Sharpness as absolute turn speed
 }
-/**
- *
- * @param {SERVER.Vector3} original the origin
- * @param {*} time lifetime
- * @param {*} spinSpeed optional speed to spin
- * @param {*} expansionRate option speed to leave origin
- * @returns {SERVER.Vector3} new position after spinning
- */
-function spiralPosition(original, time, spinSpeed = 1, expansionRate = 0.01) {
-  // Calculate distance from origin expanding over time
-  const distance = Math.sqrt(original.x ** 2 + original.z ** 2) + time * expansionRate;
 
-  // Get current angle around origin, add spin based on time
-  const baseAngle = Math.atan2(original.z, original.x);
-  const angle = baseAngle + time * spinSpeed;
+Array.prototype.weightedRandom = function(weightProp = "weight", valueProp = "item") { //thanks chatgpt
+    const totalWeight = this.reduce((sum, obj) => sum + obj[weightProp], 0);
+    const random = Math.random() * totalWeight;
 
-  // New XZ position on spiral
-  const x = Math.cos(angle) * distance;
-  const z = Math.sin(angle) * distance;
-
-  return { x, y: original.y, z };
-}
+    let cumulative = 0;
+    for (const obj of this) {
+        cumulative += obj[weightProp];
+        if (random < cumulative) {
+            return obj[valueProp];
+        }
+    }
+};
+Array.prototype.random = function() {
+    return this[getRandomInt(0,this.length-1)]
+};

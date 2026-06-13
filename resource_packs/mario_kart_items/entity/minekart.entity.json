@@ -15,9 +15,11 @@
       "scripts": {
         "animate": ["basic"]
       },
-      //"particle_effects": {
-      //  "fire": "vc:bullet_fire"
-      //},
+      "particle_effects": {
+        "mini_trubo": "vc:mini_trubo",
+        "super_mini_trubo": "vc:super_mini_trubo",
+        "ultra_mini_trubo": "vc:ultra_mini_trubo"
+      },
       "geometry": {
         "default": "geometry.minekart"
       },

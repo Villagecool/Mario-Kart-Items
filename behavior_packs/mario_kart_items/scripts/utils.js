@@ -365,3 +365,16 @@ export function waitUntil(condition, interval = 100, onComplete) {
     }, interval);
   });
 }
+
+/**
+ * 
+ * @param {Number} x The starting value
+ * @param {Number} min Minimum value
+ * @param {Number} max Maximum value
+ * @returns {Number} the number confined to the set range
+ */
+export function limit(x, min, max) {
+    if (x > max) return max
+    else if (x < min) return min
+    else return x
+}
